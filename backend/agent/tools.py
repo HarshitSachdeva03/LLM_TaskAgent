@@ -16,7 +16,7 @@ SCOPES = [
 
 def get_google_creds():
     creds = None
-    token_file = 'creds/token.json'
+    token_file = 'backend/creds/token.json'
 
     # Load existing token
     if os.path.exists(token_file):

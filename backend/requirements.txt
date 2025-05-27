@@ -1,0 +1,24 @@
+openai>=0.28.0
+langchain>=0.0.267
+python-dotenv==1.1.0 
+
+# Google API dependencies
+google-api-python-client==2.170.0 
+google-auth-oauthlib==1.2.2 
+google-auth>=2.22.0
+google-generativeai>=0.3.0
+
+# Fixed versions to avoid compatibility issues
+grpcio==1.54.0
+grpcio-tools==1.54.0
+protobuf==6.31.0 
+
+# Date parsing
+python-dateutil>=2.8.2
+
+# Web server (for API)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# Other utilities
+requests>=2.31.0

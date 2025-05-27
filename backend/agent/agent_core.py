@@ -5,7 +5,6 @@ import re
 from agent.tools import send_email, create_calendar_event
 from agent.llm_integration import query_llm
 from datetime import datetime
-
 def extract_json_from_text(text: str) -> dict | None:
     """
     Find the first JSON object in the given text and parse it.
