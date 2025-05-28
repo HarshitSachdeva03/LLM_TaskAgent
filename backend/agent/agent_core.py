@@ -2,9 +2,10 @@
 
 import json
 import re
-from agent.tools import send_email, create_calendar_event
-from agent.llm_integration import query_llm
+from backend.agent.tools import send_email, create_calendar_event
+from backend.agent.llm_integration import query_llm
 from datetime import datetime
+
 def extract_json_from_text(text: str) -> dict | None:
     """
     Find the first JSON object in the given text and parse it.
@@ -73,3 +74,38 @@ Do NOT wrap the JSON in backticks or add any explanation—just output the raw J
 
         else:
             print("❌ Unrecognized action type in JSON:", action)
+
+def run_agent_on_command(command: str) -> str:
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    prompt = f"""You're an AI assistant. Today is {today_str}. Based on this user command:
+    "{command}", decide if the user wants to send an email or create a calendar event.
+    Return exactly one JSON object, and nothing else, in one of these formats:
+1. For email:
+{{
+  "action": "email",
+  "recipient": "example@gmail.com",
+  "subject": "Subject line",
+  "body": "Email content"
+}}
+
+2. For calendar:
+{{
+  "action": "calendar",
+  "title": "Meeting title",
+  "start": "2025-04-22 14:00"
+}}
+Make sure the 'start' time is computed based on today ({today_str}) if the user says 'today'.
+Do NOT wrap the JSON in backticks or add any explanation—just output the raw JSON.
+    """
+    response = query_llm(prompt)
+    data = extract_json_from_text(response)
+    if not data:
+        return f"❌ Couldn't parse response:\n{response}"
+
+    action = data.get("action")
+    if action == "email":
+        return send_email(data["recipient"], data["subject"], data["body"])
+    elif action == "calendar":
+        return create_calendar_event(data["title"], data["start"])
+    else:
+        return f"❌ Unrecognized action: {action}"
