@@ -98,6 +98,8 @@ Make sure the 'start' time is computed based on today ({today_str}) if the user 
 Do NOT wrap the JSON in backticks or add any explanation—just output the raw JSON.
     """
     response = query_llm(prompt)
+    # //print("🧠 Gemini raw output:\n", response)- fror debugging if the request crosses the API layer
+
     data = extract_json_from_text(response)
     if not data:
         return f"❌ Couldn't parse response:\n{response}"

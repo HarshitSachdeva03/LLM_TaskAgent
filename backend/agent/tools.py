@@ -5,7 +5,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from google.auth.transport.requests import Request
-
+import pytz
 load_dotenv()
 
 # Scopes for Gmail and Calendar
@@ -62,13 +62,20 @@ def create_calendar_event(summary, start_time_str, duration_minutes=60):
     creds = get_google_creds()
     service = build('calendar', 'v3', credentials=creds)
 
-    start_time = datetime.datetime.fromisoformat(start_time_str)
+    local_tz = pytz.timezone("Asia/Kolkata")
+    start_time = local_tz.localize(datetime.datetime.fromisoformat(start_time_str))
     end_time = start_time + datetime.timedelta(minutes=duration_minutes)
 
     event = {
         'summary': summary,
-        'start': {'dateTime': start_time.isoformat(), 'timeZone': 'UTC'},
-        'end': {'dateTime': end_time.isoformat(), 'timeZone': 'UTC'},
+        'start': {
+            'dateTime': start_time.isoformat(),
+            'timeZone': 'Asia/Kolkata'
+        },
+        'end': {
+            'dateTime': end_time.isoformat(),
+            'timeZone': 'Asia/Kolkata'
+        },
     }
 
     event_result = service.events().insert(calendarId='primary', body=event).execute()
