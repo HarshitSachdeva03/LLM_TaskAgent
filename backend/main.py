@@ -1,16 +1,26 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from backend.agent.agent_core import run_agent_on_command
+from typing import List
 
 app = FastAPI()
 
 class CommandRequest(BaseModel):
     command: str
 
+class ChatRequest(BaseModel):
+    message: str
+    history: List[str]
+
 @app.post("/api/agent")
 async def run_agent_endpoint(request: CommandRequest):
-    result = run_agent_on_command(request.command)
+    result,_ = run_agent_on_command(request.command,[])
     return {"result": result}
+
+@app.post("/api/chat")
+async def chat_agent(request: ChatRequest):
+    response, updated_history = run_agent_on_command(request.message, request.history)
+    return {"reply": response, "history": updated_history}
 
 @app.get("/")
 def read_root():

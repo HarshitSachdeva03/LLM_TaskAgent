@@ -19,67 +19,18 @@ def extract_json_from_text(text: str) -> dict | None:
     except json.JSONDecodeError:
         return None
 
-def run_agent():
-    print("🤖 Welcome to your Workflow AI Agent (Gemini powered)\n")
-
-    while True:
-        command = input("📝 What would you like me to do? (or type 'exit'): ")
-        if command.lower() in ["exit", "quit"]:
-            print("👋 Goodbye!")
-            break
-        today_str = datetime.now().strftime("%Y-%m-%d")
-        prompt = f"""You're an AI assistant. Today is {today_str}. Based on this user command:
-"{command}", decide if the user wants to send an email or create a calendar event.
-
-Return exactly one JSON object, and nothing else, in one of these formats:
-
-1. For email:
-{{
-  "action": "email",
-  "recipient": "example@gmail.com",
-  "subject": "Subject line",
-  "body": "Email content"
-}}
-
-2. For calendar:
-{{
-  "action": "calendar",
-  "title": "Meeting title",
-  "start": "2025-04-22 14:00"
-}}
-Make sure the 'start' time is computed based on today ({today_str}) if the user says 'today'.
-Do NOT wrap the JSON in backticks or add any explanation—just output the raw JSON."""
-        response = query_llm(prompt)
-
-        data = extract_json_from_text(response)
-        if not data:
-            print("⚠️ Couldn't parse response:", response)
-            continue
-
-        action = data.get("action")
-        if action == "email":
-            result = send_email(
-                data["recipient"],
-                data["subject"],
-                data["body"]
-            )
-            print("✅", result)
-
-        elif action == "calendar":
-            result = create_calendar_event(
-                data["title"],
-                data["start"]
-            )
-            print("📅", result)
-
-        else:
-            print("❌ Unrecognized action type in JSON:", action)
-
-def run_agent_on_command(command: str) -> str:
+def run_agent_on_command(user_input: str, history: list[str]) -> tuple[str, list[str]]:
     today_str = datetime.now().strftime("%Y-%m-%d")
-    prompt = f"""You're an AI assistant. Today is {today_str}. Based on this user command:
-    "{command}", decide if the user wants to send an email or create a calendar event.
-    Return exactly one JSON object, and nothing else, in one of these formats:
+    prompt = f"""You are a helpful assistant that only helps users with two actions:
+1. Sending emails
+2. Creating calendar events
+
+Today is {today_str}.
+Your job is to understand the conversation and do one of the following:
+- If the user input is unclear or missing important details, respond with a clarifying question
+- If the input is unrelated to email/calendar, politely say you can only help with those
+- If you're ready to perform the action, return a valid JSON object in exactly one of the following formats:
+
 1. For email:
 {{
   "action": "email",
@@ -92,22 +43,49 @@ def run_agent_on_command(command: str) -> str:
 {{
   "action": "calendar",
   "title": "Meeting title",
-  "start": "2025-04-22 14:00"
+  "start": "2025-05-28 17:00"
 }}
-Make sure the 'start' time is computed based on today ({today_str}) if the user says 'today'.
-Do NOT wrap the JSON in backticks or add any explanation—just output the raw JSON.
-    """
+
+3. For clarification:
+{{
+  "action": "clarify",
+  "question": "What time should I set the reminder for?"
+}}
+
+4. For rejection:
+{{
+  "action": "reject",
+  "message": "Sorry, I can only help with emails and calendar events."
+}}
+
+Conversation so far:
+{''.join(history)}
+
+User: {user_input}
+Assistant:"""
+
     response = query_llm(prompt)
-    # //print("🧠 Gemini raw output:\n", response)- fror debugging if the request crosses the API layer
+    history.append(f"User: {user_input}\nAssistant: {response}\n")
 
     data = extract_json_from_text(response)
     if not data:
-        return f"❌ Couldn't parse response:\n{response}"
+        return f"❌ Couldn't parse LLM response:\n\n{response}", history
 
     action = data.get("action")
+
     if action == "email":
-        return send_email(data["recipient"], data["subject"], data["body"])
+        result = send_email(data["recipient"], data["subject"], data["body"])
+        return f"✅ {result}", history
+
     elif action == "calendar":
-        return create_calendar_event(data["title"], data["start"])
+        result = create_calendar_event(data["title"], data["start"])
+        return f"📅 {result}", history
+
+    elif action == "clarify":
+        return data.get("question", "Can you clarify your request?"), history
+
+    elif action == "reject":
+        return data.get("message", "I'm limited to emails and calendar events."), history
+
     else:
-        return f"❌ Unrecognized action: {action}"
+        return f"❌ Unrecognized action: {action}\n\n{response}", history
